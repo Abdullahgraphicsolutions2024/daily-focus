@@ -1,29 +1,27 @@
 
 import streamlit as st
 import json, os
-from datetime import date
+from datetime import date, datetime, timedelta
 import time
 
 st.set_page_config(page_title="Daily Focus Pro", layout="centered")
 
 st.markdown("""
 <style>
-body {
-    background-color: #0d1b2a;
-    color: white;
-    font-family: 'Alberto', sans-serif;
-    font-size: 16px;
-}
+body { background-color: #0d1b2a; color: #ffffff; font-family: "Alberta", sans-serif; font-size:16px; }
 h1, h2, h3 {
-    color: #00ffff;
+    color: #00d4ff;
+    font-family: "Alberta", sans-serif;
 }
-input, select, .stTextInput input {
-    background-color: #102030 !important;
+input, select, .stTextInput > div > div > input {
+    background-color: #1b263b !important;
     color: white !important;
+    border-radius: 8px !important;
 }
 .stButton>button {
-    background-color: #00ffff;
+    background-color: #00d4ff;
     color: black;
+    border-radius: 8px;
     font-weight: bold;
 }
 </style>
@@ -48,8 +46,10 @@ if username and password == "1234":
     if "tasks" not in st.session_state:
         st.session_state.tasks = load_tasks()
 
-    filter_cat = st.selectbox("Filter by Category", ["All", "Work", "Study", "Personal"])
+    st.subheader("Filter Tasks by Category")
+    filter_cat = st.selectbox("Choose category", ["All", "Work", "Study", "Personal"])
 
+    st.markdown("### Task List")
     filtered = [t for t in st.session_state.tasks if filter_cat == "All" or t["category"] == filter_cat]
     for i, task in enumerate(filtered):
         col1, col2, col3 = st.columns([0.05, 0.7, 0.25])
@@ -60,6 +60,7 @@ if username and password == "1234":
         with col3:
             st.date_input("", value=date.fromisoformat(task["deadline"]), disabled=True, key=f"date_{i}")
 
+    st.markdown("### Add New Task")
     new_task = st.text_input("Task")
     new_cat = st.selectbox("Category", ["Work", "Study", "Personal"])
     new_deadline = st.date_input("Deadline", value=date.today())
@@ -78,19 +79,25 @@ if username and password == "1234":
             st.warning("Please enter a valid task.")
 
     if len(st.session_state.tasks) > 0:
-        remove_index = st.number_input("Remove task (1-based)", min_value=1, max_value=len(st.session_state.tasks))
+        st.markdown("### Remove Task by Number")
+        remove_index = st.number_input("Enter task number (1-based)", min_value=1, max_value=len(st.session_state.tasks))
         if st.button("Remove Task"):
             removed = st.session_state.tasks.pop(remove_index - 1)
             save_tasks(st.session_state.tasks)
             st.success(f"Removed: {removed['text']}")
             st.experimental_rerun()
 
+    st.markdown("### Reminder Notifications")
     today = date.today()
-    due_soon = [t for t in st.session_state.tasks if not t["done"] and date.fromisoformat(t["deadline"]) <= today]
-    for task in due_soon:
-        st.warning(f"Task '{task['text']}' is due!")
+    for task in st.session_state.tasks:
+        deadline = date.fromisoformat(task["deadline"])
+        if not task["done"] and (deadline - today).days == 1:
+            st.info(f"Reminder: Task '{task['text']}' is due tomorrow!")
+        elif not task["done"] and deadline <= today:
+            st.error(f"Alert: Task '{task['text']}' is due or overdue!")
 
-    timer_min = st.slider("Focus Timer (minutes)", 1, 60, 25)
+    st.markdown("### Focus Timer (Minutes)")
+    timer_min = st.slider("Select Minutes", 1, 60, 25)
     if st.button("Start Timer"):
         st.info(f"Timer started for {timer_min} minutes.")
         with st.empty():
@@ -101,7 +108,9 @@ if username and password == "1234":
             st.success("Time's up!")
 
     save_tasks(st.session_state.tasks)
+    st.markdown("---")
+    st.caption("© 2025 Daily Focus Pro")
 else:
     if username and password:
         st.error("Incorrect password. Hint: 1234")
-    st.warning("Enter credentials to continue.")
+    st.warning("Enter login credentials to continue.")
